@@ -1,6 +1,8 @@
 // N3 library for storing data
 import N3 from 'https://cdn.skypack.dev/pin/n3@v1.16.2-B0kP2kiBFDju8f0s4X37/mode=imports,min/optimized/n3.js';
 
+// TODO async version of buildNQuadsStore? (currently callback hell)
+
 function buildNQuadsStore(nQuadsString, callback) { // callback(nQuadsStore)
   const
   n3Parser    = new N3.Parser(),
