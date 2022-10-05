@@ -31,25 +31,22 @@ window.customElements.define('my-line-items', MyLineItems);
 window.customElements.define('my-checkout-button', MyCheckoutButton);
 
 // UI
-console.log(`1`);
 
 // Show the line items
-Qworum.getData(['@', 'line items'], (lineItems) => {
-  console.log(`20 line items string: ${lineItems.value}`);
-
-  buildNQuadsStore(
-    lineItems instanceof Qworum.message.SemanticData ? lineItems.value : null,
-    (lineItemsStore) => {
-      console.log(`21 line items: ${lineItemsStore.size}`);
+Qworum.getData(
+  ['@', 'line items'], 
+  async (lineItems) => {
+    try {
+      const lineItemsStore = await buildNQuadsStore(
+        lineItems instanceof Qworum.message.SemanticData ? lineItems.value : null
+      );
 
       lineItems = [];
-    
+
       const products = lineItemsStore.getQuads(
         null, namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), namedNode('https://schema.org/Product'), null
       );
-      console.log(`22 products: ${products.length}`);
       for (const product of products) {
-        console.log(`3`);
         const
         productID        = lineItemsStore.getQuads(product.subject, namedNode('https://schema.org/productID'), null, product.graph)[0].object.value,
         productName      = lineItemsStore.getQuads(product.subject, namedNode('https://schema.org/name'), null, product.graph)[0].object.value,
@@ -57,23 +54,21 @@ Qworum.getData(['@', 'line items'], (lineItems) => {
         productPrice     = parseFloat(lineItemsStore.getQuads(productOffers, namedNode('https://schema.org/price'), null, product.graph)[0].object.value),
         lineItem         = {id: productID, title: productName, count: 1, price: {EUR: productPrice}},
         existingLineItem = lineItems.find(e => e.id === lineItem.id);
-        console.log(`4`);
     
         if (existingLineItem) {
           existingLineItem.count++;
         } else {
           lineItems.push(lineItem);
         }
-        console.log(`5`);
       }
 
       lineItems = JSON.stringify(lineItems);
-      console.log(`lineItems: ${lineItems}`);
       document.querySelector('#line-items').setAttribute('line-items', lineItems);
+    } catch (error) {
+      console.error(`error while while displaying line items: ${error}`);
     }
-  );
-
-});
+  }
+);
 
 // Set up the close button
 document.querySelector('#close').addEventListener('click', () => {

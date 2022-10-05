@@ -27,7 +27,7 @@ console.log(`articles: ${JSON.stringify(articles)}`);
 // Web components
 import { MyArticle } from "./modules/web-components/article.mjs";
 import { MySiteBanner } from "./modules/web-components/site-banner.mjs";
-import { buildNQuadsStore } from "../../../cart.demo.qworum.net/_assets/js/modules/n-quads-store.mjs";
+import { buildNQuadsStore } from "./modules/n-quads-store.mjs";
 window.customElements.define('my-article', MyArticle);
 window.customElements.define('my-site-banner', MySiteBanner);
 
@@ -36,18 +36,21 @@ displayTheArticlesOnSale();
 displayCartTotal();
 
 function displayCartTotal() {
-  Qworum.getData(['@', 'shopping cart', 'total'], (total) => {
+  Qworum.getData(['@', 'shopping cart', 'total'], async (total) => {
     if (total instanceof Qworum.message.SemanticData) {
-      buildNQuadsStore(total.value, async (totalStore) => {
-        const total = totalStore.getQuads(null, namedNode('https://schema.org/price'))[0].object.value;
+      try {
+        const totalStore = await buildNQuadsStore(total.value);
+        total = totalStore.getQuads(null, namedNode('https://schema.org/price'))[0].object.value;
+
         console.log(`total: ${total}`);
         document.querySelector('#banner').setAttribute('cart-total', `${total}`);
-      });
+      } catch (error) {
+        console.error(`error while loading shopping cart total: ${error}`);
+      }
     } else {
       total = 0.0;
       document.querySelector('#banner').setAttribute('cart-total', `${total}`);
     }
-
   });
 }
 

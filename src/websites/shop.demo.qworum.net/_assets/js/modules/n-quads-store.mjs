@@ -3,30 +3,36 @@ import N3 from 'https://cdn.skypack.dev/pin/n3@v1.16.2-B0kP2kiBFDju8f0s4X37/mode
 
 // TODO async version of buildNQuadsStore? (currently callback hell)
 
-function buildNQuadsStore(nQuadsString, callback) { // callback(nQuadsStore)
+// returns a promise of an N3.Store
+function buildNQuadsStore(nQuadsString) {
+  if (!nQuadsString) {
+    return new Promise((resolve, reject) => resolve(new N3.Store()));
+  }
+
   const
   n3Parser    = new N3.Parser(),
   nQuadsStore = new N3.Store();
 
-  if (!nQuadsString) {
-    callback(nQuadsStore);
-    return;
-  }
-
-  // Populate the N-Quads store
-  n3Parser.parse(
-    nQuadsString,
-    (error, myQuad, prefixes) => {
-      if (myQuad) {
-        // console.log(`Quad: subject="${myQuad.subject.value}", predicate="${myQuad.predicate.value}", object="${myQuad.object.value}", graph="${myQuad.graph}"`);
-        nQuadsStore.add(myQuad);
-      } else {
-        // console.log(`Parsing finished. Prefixes: ${JSON.stringify(prefixes)}`);
-        if(typeof callback === 'function') callback(nQuadsStore);
+  return new Promise((resolve, reject) => {
+    // Populate the N-Quads store
+    n3Parser.parse(
+      nQuadsString,
+      (error, quad, prefixes) => {
+        if (quad) {
+          // console.log(`Quad: subject="${quad.subject.value}", predicate="${quad.predicate.value}", object="${quad.object.value}", graph="${quad.graph.value}"`);
+          nQuadsStore.add(quad);
+        } else if(prefixes) {
+          console.log(`N-Quads parsing finished. Prefixes: ${JSON.stringify(prefixes)}`);
+          resolve(nQuadsStore);
+        } else { // error
+          console.error(`N-Quads parsing error: ${JSON.stringify(prefixes)}`);
+          reject(new Error(`${error}`));
+        }
       }
-    }
-  );
+    );
+  });
 }
+
 
 // returns a string
 function nQuadsStoreToString(store) {

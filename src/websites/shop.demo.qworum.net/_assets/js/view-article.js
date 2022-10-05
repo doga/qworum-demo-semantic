@@ -55,30 +55,18 @@ async function show(articleId) {
   displayCartTotal();
 }
 
-function displayCartTotal() {
-  Qworum.getData(['@', 'shopping cart', 'total'], (total) => {
+function displayCartTotal() { // TODO factor out this duplicate from home.js
+  Qworum.getData(['@', 'shopping cart', 'total'], async (total) => {
     if (total instanceof Qworum.message.SemanticData) {
-      buildNQuadsStore(total.value, (store) => {
-        // Query the N-Quads store
-        const tradeAction = store.getQuads(
-          null, 
-          namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), 
-          namedNode('http://schema.org/TradeAction')
-        )[0];
+      try {
+        const totalStore = await buildNQuadsStore(total.value);
+        total = totalStore.getQuads(null, namedNode('https://schema.org/price'))[0].object.value;
 
-        total = store.getQuads(
-          tradeAction, 
-          namedNode('https://schema.org/price'), 
-          null
-        )[0].object.value;
-
-        // priceCurrency = store.getQuads(
-        //   tradeAction, 
-        //   namedNode('https://schema.org/priceCurrency'), 
-        //   null
-        // )[0].object.value;
+        console.log(`total: ${total}`);
         document.querySelector('#banner').setAttribute('cart-total', `${total}`);
-      });
+      } catch (error) {
+        console.error(`error while loading shopping cart total: ${error}`);
+      }
     } else {
       total = 0.0;
       document.querySelector('#banner').setAttribute('cart-total', `${total}`);
