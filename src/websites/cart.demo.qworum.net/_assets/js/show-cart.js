@@ -31,51 +31,50 @@ window.customElements.define('my-line-items', MyLineItems);
 window.customElements.define('my-checkout-button', MyCheckoutButton);
 
 // UI
+show();
 
-// Show the line items
-Qworum.getData(
-  ['@', 'line items'], 
-  async (lineItems) => {
-    try {
-      const lineItemsStore = await buildNQuadsStore(
-        lineItems instanceof Qworum.message.SemanticData ? lineItems.value : null
-      );
+async function show() {
+  // Show the line items
+  let lineItems = await Qworum.getData(['@', 'line items']);
 
-      lineItems = [];
+  try {
+    const lineItemsStore = await buildNQuadsStore(
+      lineItems instanceof Qworum.message.SemanticData ? lineItems.value : null
+    );
 
-      const products = lineItemsStore.getQuads(
-        null, namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), namedNode('https://schema.org/Product'), null
-      );
-      for (const product of products) {
-        const
-        productID        = lineItemsStore.getQuads(product.subject, namedNode('https://schema.org/productID'), null, product.graph)[0].object.value,
-        productName      = lineItemsStore.getQuads(product.subject, namedNode('https://schema.org/name'), null, product.graph)[0].object.value,
-        productOffers    = lineItemsStore.getQuads(product.subject, namedNode('https://schema.org/offers'), null, product.graph)[0].object,
-        productPrice     = parseFloat(lineItemsStore.getQuads(productOffers, namedNode('https://schema.org/price'), null, product.graph)[0].object.value),
-        lineItem         = {id: productID, title: productName, count: 1, price: {EUR: productPrice}},
-        existingLineItem = lineItems.find(e => e.id === lineItem.id);
-    
-        if (existingLineItem) {
-          existingLineItem.count++;
-        } else {
-          lineItems.push(lineItem);
-        }
+    lineItems = [];
+
+    const products = lineItemsStore.getQuads(
+      null, namedNode('http://www.w3.org/1999/02/22-rdf-syntax-ns#type'), namedNode('https://schema.org/Product'), null
+    );
+    for (const product of products) {
+      const
+      productID        = lineItemsStore.getQuads(product.subject, namedNode('https://schema.org/productID'), null, product.graph)[0].object.value,
+      productName      = lineItemsStore.getQuads(product.subject, namedNode('https://schema.org/name'), null, product.graph)[0].object.value,
+      productOffers    = lineItemsStore.getQuads(product.subject, namedNode('https://schema.org/offers'), null, product.graph)[0].object,
+      productPrice     = parseFloat(lineItemsStore.getQuads(productOffers, namedNode('https://schema.org/price'), null, product.graph)[0].object.value),
+      lineItem         = {id: productID, title: productName, count: 1, price: {EUR: productPrice}},
+      existingLineItem = lineItems.find(e => e.id === lineItem.id);
+
+      if (existingLineItem) {
+        existingLineItem.count++;
+      } else {
+        lineItems.push(lineItem);
       }
-
-      lineItems = JSON.stringify(lineItems);
-      document.querySelector('#line-items').setAttribute('line-items', lineItems);
-    } catch (error) {
-      console.error(`error while while displaying line items: ${error}`);
     }
+
+    lineItems = JSON.stringify(lineItems);
+    document.querySelector('#line-items').setAttribute('line-items', lineItems);
+  } catch (error) {
+    console.error(`error while while displaying line items: ${error}`);
   }
-);
 
-// Set up the close button
-document.querySelector('#close').addEventListener('click', () => {
-  // Execute a Qworum script
-  Qworum.eval(Script(
-    Return(Json(0))
-  ));
-});
-
+  // Set up the close button
+  document.querySelector('#close').addEventListener('click', async () => {
+    // Execute a Qworum script
+    await Qworum.eval(Script(
+      Return(Json(0))
+    ));
+  });
+}
 

@@ -22,7 +22,7 @@ function buildNQuadsStore(nQuadsString) {
           // console.log(`Quad: subject="${quad.subject.value}", predicate="${quad.predicate.value}", object="${quad.object.value}", graph="${quad.graph.value}"`);
           nQuadsStore.add(quad);
         } else if(prefixes) {
-          console.log(`N-Quads parsing finished. Prefixes: ${JSON.stringify(prefixes)}`);
+          // console.log(`N-Quads parsing finished. Prefixes: ${JSON.stringify(prefixes)}`);
           resolve(nQuadsStore);
         } else { // error
           console.error(`N-Quads parsing error: ${JSON.stringify(prefixes)}`);

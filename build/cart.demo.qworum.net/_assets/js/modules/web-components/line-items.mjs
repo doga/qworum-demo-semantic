@@ -82,7 +82,7 @@ class MyLineItems extends HTMLElement {
       lineItems          = JSON.parse(newValue),
       lineItemsElement   = this.shadowRoot.querySelector('#line-items'),
       totalAmountElement = this.shadowRoot.querySelector('#total-amount');
-      console.log(`webcomponent lineItems: ${JSON.stringify(lineItems)}`);
+      // console.log(`webcomponent lineItems: ${JSON.stringify(lineItems)}`);
 
 
       lineItemsElement.innerHTML = '';
@@ -91,7 +91,7 @@ class MyLineItems extends HTMLElement {
       let totalCents = 0; // TODO use a 'total' attribute instead, for getting the total which the cart stores
 
       for (const lineItemData of lineItems) {
-        console.log(`webcomponent lineItem: ${JSON.stringify(lineItemData)}`);
+        // console.log(`webcomponent lineItem: ${JSON.stringify(lineItemData)}`);
         totalCents += Math.trunc(lineItemData.price.EUR * 100) * lineItemData.count;
 
         const

@@ -35,23 +35,20 @@ window.customElements.define('my-site-banner', MySiteBanner);
 displayTheArticlesOnSale();
 displayCartTotal();
 
-function displayCartTotal() {
-  Qworum.getData(['@', 'shopping cart', 'total'], async (total) => {
-    if (total instanceof Qworum.message.SemanticData) {
-      try {
-        const totalStore = await buildNQuadsStore(total.value);
-        total = totalStore.getQuads(null, namedNode('https://schema.org/price'))[0].object.value;
+async function displayCartTotal() {
+  let total = await Qworum.getData(['@', 'shopping cart', 'total']);
 
-        console.log(`total: ${total}`);
-        document.querySelector('#banner').setAttribute('cart-total', `${total}`);
-      } catch (error) {
-        console.error(`error while loading shopping cart total: ${error}`);
-      }
-    } else {
-      total = 0.0;
+  if (total instanceof Qworum.message.SemanticData) {
+    try {
+      const totalStore = await buildNQuadsStore(total.value);
+      total = totalStore.getQuads(null, namedNode('https://schema.org/price'))[0].object.value;
+
+      console.log(`total: ${total}`);
       document.querySelector('#banner').setAttribute('cart-total', `${total}`);
+    } catch (error) {
+      console.error(`error while loading shopping cart total: ${error}`);
     }
-  });
+  }
 }
 
 function displayTheArticlesOnSale() {
@@ -70,10 +67,10 @@ function displayTheArticlesOnSale() {
     button.append(article.element);
     contentArea.append(button);
 
-    button.addEventListener('click', () => {
+    button.addEventListener('click', async () => {
       // Execute a Qworum script
       // (See https://qworum.net/en/specification/v1/#script)
-      Qworum.eval(Script(
+      await Qworum.eval(Script(
         Sequence(
           // Call the service end-point to view an article.
           // (See https://qworum.net/en/specification/v1/#call)

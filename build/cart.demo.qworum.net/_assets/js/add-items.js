@@ -27,96 +27,90 @@ const
 // Update the cart.
 updateCart();
 
-function updateCart() {
-  Qworum.getData('line items to add', async (lineItemsToAdd) => {
+async function updateCart() {
+  let lineItemsToAdd = await Qworum.getData('line items to add');
+
+  try {
+    // Validate the incoming line items to add
+    if (!(lineItemsToAdd instanceof Qworum.message.SemanticData && lineItemsToAdd.type === 'json-ld')) {
+      await Qworum.eval(Script(
+        Fault('* the "line items to add" call parameter is missing or invalid')
+      ));
+      return;
+    }
+    lineItemsToAdd = JSON.parse(lineItemsToAdd.value);
+
+    // Transform "line items to add" from JSON-LD to N-Quads string
+    lineItemsToAdd = await jsonld.canonize(lineItemsToAdd, {
+      algorithm: 'URDNA2015',
+      format: 'application/n-quads'
+    });
+
+    // store for incoming line items to add
+    let 
+    lineItemsToAddStore = await buildNQuadsStore(lineItemsToAdd),
+    lineItems = await Qworum.getData(['@', 'line items']);
+
+    // Read cart's line items
     try {
-      // Validate the incoming line items to add
-      if (!(lineItemsToAdd instanceof Qworum.message.SemanticData && lineItemsToAdd.type === 'json-ld')) {
-        Qworum.eval(Script(
-          Fault('* the "line items to add" call parameter is missing or invalid')
-        ));
-        return;
+      const lineItemsStore = await buildNQuadsStore(
+        lineItems instanceof Qworum.message.SemanticData ? lineItems.value : null
+      );
+
+      // find the graph name for new items
+      let i = 1, lineItemToAddGraph = `g${i}`;
+      while (lineItemsStore.getGraphs().find((graph) => graph.value === lineItemToAddGraph)) {
+        lineItemToAddGraph = `g${++i}`;
       }
-      lineItemsToAdd = JSON.parse(lineItemsToAdd.value);
 
-      // Transform "line items to add" from JSON-LD to N-Quads string
-      lineItemsToAdd = await jsonld.canonize(lineItemsToAdd, {
-        algorithm: 'URDNA2015',
-        format: 'application/n-quads'
+      // add new items to the store
+      lineItemsToAddStore.forEach((aQuad) => {
+        lineItemsStore.add(quad(aQuad.subject, aQuad.predicate, aQuad.object, lineItemToAddGraph));
       });
 
-      // store for incoming line items to add
-      const lineItemsToAddStore = await buildNQuadsStore(lineItemsToAdd);
+      // persist the line items
+      lineItems = SemanticData(
+        nQuadsStoreToString(lineItemsStore), 'n-quads'
+      );
 
-      // Read cart's line items
-      Qworum.getData(['@', 'line items'], async (lineItems) => {
-        try {
-          const lineItemsStore = await buildNQuadsStore(
-            lineItems instanceof Qworum.message.SemanticData ? lineItems.value : null
-          );
+      // Compute the cart total in euro cents
+      const prices = lineItemsStore.getQuads(null, namedNode('https://schema.org/price'));
+      let totalCents = prices.reduce(
+        (totalCents, lineItem) => totalCents + Math.trunc(parseFloat(lineItem.object.value) * 100), 0
+      );
 
-          // find the graph name for new items
-          let i = 1, lineItemToAddGraph = `g${i}`;
-          while (lineItemsStore.getGraphs().find((graph) => graph.value === lineItemToAddGraph)) {
-            lineItemToAddGraph = `g${++i}`;
-          }
+      // store the cart contents and the total
+      const 
+      totalNQuadsString = await jsonld.canonize({
+        "@context"     : { "@vocab": "https://schema.org/" },
+        "@type"        : "TradeAction",
+        "price"        : `${totalCents / 100}`,
+        "priceCurrency": "EUR"
+      }),
+      totalNQuadsStore = await buildNQuadsStore(totalNQuadsString);
 
-          // add new items to the store
-          lineItemsToAddStore.forEach((aQuad) => {
-            lineItemsStore.add(quad(aQuad.subject, aQuad.predicate, aQuad.object, lineItemToAddGraph));
-          });
+      totalCents = SemanticData(nQuadsStoreToString(totalNQuadsStore), 'n-quads');
 
-          // persist the line items
-          lineItems = SemanticData(
-            nQuadsStoreToString(lineItemsStore), 'n-quads'
-          );
-
-          // Compute the cart total in euro cents
-          const prices = lineItemsStore.getQuads(null, namedNode('https://schema.org/price'));
-          let totalCents = prices.reduce(
-            (totalCents, lineItem) => totalCents + Math.trunc(parseFloat(lineItem.object.value) * 100), 0
-          );
-
-          // store the cart contents and the total
-          const 
-          totalNQuadsString = await jsonld.canonize({
-            "@context"     : { "@vocab": "https://schema.org/" },
-            "@type"        : "TradeAction",
-            "price"        : `${totalCents / 100}`,
-            "priceCurrency": "EUR"
-          }),
-          totalNQuadsStore = await buildNQuadsStore(totalNQuadsString);
-
-          totalCents = SemanticData(nQuadsStoreToString(totalNQuadsStore), 'n-quads');
-
-          Qworum.setData(['@', 'line items'], lineItems, (success) => {
-            if (!success) {
-              Qworum.eval(Script(
-                Fault('* the line items list was not updated')
-              ));
-              return;
-            }
-
-            Qworum.setData(['@', 'total'], totalCents, (success) => {
-              if (!success) {
-                Qworum.eval(Script(
-                  Fault('* the total was not updated')
-                ));
-                return;
-              }
-
-              // show the cart
-              Qworum.eval(Script(
-                Call('@', '../show-cart/')
-              ));
-            });
-          });
-        } catch (error) {
-          console.error(`error while updating shopping cart: ${error}`);
+      if (await Qworum.setData(['@', 'line items'], lineItems)) {
+        if (await Qworum.setData(['@', 'total'], totalCents)) {
+          // show the cart
+          await Qworum.eval(Script(
+            Call('@', '../show-cart/')
+          ));
+        } else {
+          await Qworum.eval(Script(
+            Fault('* the total was not updated')
+          ));
         }
-      });
+      } else {
+        await Qworum.eval(Script(
+          Fault('* the line items list was not updated')
+        ));
+      }
     } catch (error) {
       console.error(`error while updating shopping cart: ${error}`);
     }
-  });
+  } catch (error) {
+    console.error(`error while updating shopping cart: ${error}`);
+  }
 }
