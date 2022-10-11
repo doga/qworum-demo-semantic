@@ -1,6 +1,6 @@
-// JSON-LD library for call arguments and returned results
+// JSON-LD library for call arguments and returned results (See https://www.skypack.dev/view/jsonld)
 import jsonld from 'https://cdn.skypack.dev/pin/jsonld@v8.1.0-HhtG5EE2PmUcTIacrag8/mode=imports,min/optimized/jsonld.js';
-// N3 library for storing data
+// N3 library for storing data (See https://www.skypack.dev/view/n3)
 import N3 from 'https://cdn.skypack.dev/pin/n3@v1.16.2-B0kP2kiBFDju8f0s4X37/mode=imports,min/optimized/n3.js';
 const 
 { namedNode, literal, defaultGraph, quad } = N3.DataFactory;
