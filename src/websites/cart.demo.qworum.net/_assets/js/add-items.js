@@ -5,35 +5,36 @@ import N3 from 'https://cdn.skypack.dev/pin/n3@v1.16.2-B0kP2kiBFDju8f0s4X37/mode
 const { namedNode, literal, defaultGraph, quad } = N3.DataFactory;
 
 // N-Quads store builder
+// (for a SPARQL interface on top of in-memory N-Quads try this library: https://www.skypack.dev/view/oxigraph)
 import { buildNQuadsStore, nQuadsStoreToString } from './modules/n-quads-store.mjs';
 
 // Qworum library
 import { Qworum } from "./modules/qworum/qworum-for-web-pages.mjs";
 const
   // Qworum Data value types
-  Json         = Qworum.Json,
-  SemanticData = Qworum.SemanticData,
+  Json = Qworum.runtime.Json,
+  SemanticData = Qworum.runtime.SemanticData,
   // Qworum instructions
-  Data     = Qworum.Data,
-  Return   = Qworum.Return,
-  Sequence = Qworum.Sequence,
-  Goto     = Qworum.Goto,
-  Call     = Qworum.Call,
-  Fault    = Qworum.Fault,
-  Try      = Qworum.Try,
+  Data = Qworum.runtime.Data,
+  Return = Qworum.runtime.Return,
+  Sequence = Qworum.runtime.Sequence,
+  Goto = Qworum.runtime.Goto,
+  Call = Qworum.runtime.Call,
+  Fault = Qworum.runtime.Fault,
+  Try = Qworum.runtime.Try,
   // Qworum script
-  Script = Qworum.Script;
+  Script = Qworum.runtime.Script;
 
 // Update the cart.
 updateCart();
 
 async function updateCart() {
-  let lineItemsToAdd = await Qworum.getData('line items to add');
+  let lineItemsToAdd = await Qworum.runtime.getData('line items to add');
 
   try {
     // Validate the incoming line items to add
-    if (!(lineItemsToAdd instanceof Qworum.message.SemanticData && lineItemsToAdd.type === 'json-ld')) {
-      await Qworum.eval(Script(
+    if (!(lineItemsToAdd instanceof Qworum.runtime.message.SemanticData && lineItemsToAdd.type === 'json-ld')) {
+      await Qworum.runtime.eval(Script(
         Fault('* the "line items to add" call parameter is missing or invalid')
       ));
       return;
@@ -47,14 +48,14 @@ async function updateCart() {
     });
 
     // store for incoming line items to add
-    let 
-    lineItemsToAddStore = await buildNQuadsStore(lineItemsToAdd),
-    lineItems = await Qworum.getData(['@', 'line items']);
+    let
+      lineItemsToAddStore = await buildNQuadsStore(lineItemsToAdd),
+      lineItems = await Qworum.runtime.getData(['@', 'line items']);
 
     // Read cart's line items
     try {
       const lineItemsStore = await buildNQuadsStore(
-        lineItems instanceof Qworum.message.SemanticData ? lineItems.value : null
+        lineItems instanceof Qworum.runtime.message.SemanticData ? lineItems.value : null
       );
 
       // find the graph name for new items
@@ -80,30 +81,30 @@ async function updateCart() {
       );
 
       // store the cart contents and the total
-      const 
-      totalNQuadsString = await jsonld.canonize({
-        "@context"     : { "@vocab": "https://schema.org/" },
-        "@type"        : "TradeAction",
-        "price"        : `${totalCents / 100}`,
-        "priceCurrency": "EUR"
-      }),
-      totalNQuadsStore = await buildNQuadsStore(totalNQuadsString);
+      const
+        totalNQuadsString = await jsonld.canonize({
+          "@context": { "@vocab": "https://schema.org/" },
+          "@type": "TradeAction",
+          "price": `${totalCents / 100}`,
+          "priceCurrency": "EUR"
+        }),
+        totalNQuadsStore = await buildNQuadsStore(totalNQuadsString);
 
       totalCents = SemanticData(nQuadsStoreToString(totalNQuadsStore), 'n-quads');
 
-      if (await Qworum.setData(['@', 'line items'], lineItems)) {
-        if (await Qworum.setData(['@', 'total'], totalCents)) {
+      if (await Qworum.runtime.setData(['@', 'line items'], lineItems)) {
+        if (await Qworum.runtime.setData(['@', 'total'], totalCents)) {
           // show the cart
-          await Qworum.eval(Script(
+          await Qworum.runtime.eval(Script(
             Call('@', '../show-cart/')
           ));
         } else {
-          await Qworum.eval(Script(
+          await Qworum.runtime.eval(Script(
             Fault('* the total was not updated')
           ));
         }
       } else {
-        await Qworum.eval(Script(
+        await Qworum.runtime.eval(Script(
           Fault('* the line items list was not updated')
         ));
       }

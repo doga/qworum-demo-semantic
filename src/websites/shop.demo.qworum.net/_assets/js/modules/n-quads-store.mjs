@@ -1,4 +1,5 @@
 // N3 library for storing data (See https://www.skypack.dev/view/n3)
+// (for a SPARQL interface on top of in-memory N-Quads try this library: https://www.skypack.dev/view/oxigraph)
 import N3 from 'https://cdn.skypack.dev/pin/n3@v1.16.2-B0kP2kiBFDju8f0s4X37/mode=imports,min/optimized/n3.js';
 
 // returns a promise of an N3.Store

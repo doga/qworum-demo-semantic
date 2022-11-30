@@ -1,4 +1,5 @@
 // N3 library for storing data (See https://www.skypack.dev/view/n3)
+// (for a SPARQL interface on top of in-memory N-Quads try this library: https://www.skypack.dev/view/oxigraph)
 import N3 from 'https://cdn.skypack.dev/pin/n3@v1.16.2-B0kP2kiBFDju8f0s4X37/mode=imports,min/optimized/n3.js';
 const { namedNode, literal, defaultGraph, quad } = N3.DataFactory;
 
@@ -6,19 +7,19 @@ const { namedNode, literal, defaultGraph, quad } = N3.DataFactory;
 import { Qworum } from "./modules/qworum/qworum-for-web-pages.mjs";
 console.log(`Qworum.version: ${Qworum.version}`);
 const
-// Qworum Data value types
-Json         = Qworum.Json,
-SemanticData = Qworum.SemanticData,
-// Qworum instructions
-Data         = Qworum.Data,
-Return       = Qworum.Return,
-Sequence     = Qworum.Sequence,
-Goto         = Qworum.Goto,
-Call         = Qworum.Call,
-Fault        = Qworum.Fault,
-Try          = Qworum.Try,
-// Qworum script
-Script       = Qworum.Script;
+  // Qworum Data value types
+  Json = Qworum.runtime.Json,
+  SemanticData = Qworum.runtime.SemanticData,
+  // Qworum instructions
+  Data = Qworum.runtime.Data,
+  Return = Qworum.runtime.Return,
+  Sequence = Qworum.runtime.Sequence,
+  Goto = Qworum.runtime.Goto,
+  Call = Qworum.runtime.Call,
+  Fault = Qworum.runtime.Fault,
+  Try = Qworum.runtime.Try,
+  // Qworum script
+  Script = Qworum.runtime.Script;
 
 // Application data
 import { articles } from "./modules/articles.mjs";
@@ -36,9 +37,9 @@ displayTheArticlesOnSale();
 displayCartTotal();
 
 async function displayCartTotal() {
-  let total = await Qworum.getData(['@', 'shopping cart', 'total']);
+  let total = await Qworum.runtime.getData(['@', 'shopping cart', 'total']);
 
-  if (total instanceof Qworum.message.SemanticData) {
+  if (total instanceof Qworum.runtime.message.SemanticData) {
     try {
       const totalStore = await buildNQuadsStore(total.value);
       total = totalStore.getQuads(null, namedNode('https://schema.org/price'))[0].object.value;
@@ -56,11 +57,11 @@ function displayTheArticlesOnSale() {
 
   for (let i = 0; i < articles.length; i++) {
     const
-    article = {
-      data   : articles[i],
-      element: document.createElement('my-article')
-    },
-    button  = document.createElement('button');
+      article = {
+        data: articles[i],
+        element: document.createElement('my-article')
+      },
+      button = document.createElement('button');
 
     article.element.setAttribute('image', `../_assets/images/articles/${article.data.image}`);
     article.element.setAttribute('description', article.data.description);
@@ -70,29 +71,29 @@ function displayTheArticlesOnSale() {
     button.addEventListener('click', async () => {
       // Execute a Qworum script
       // (See https://qworum.net/en/specification/v1/#script)
-      await Qworum.eval(Script(
+      await Qworum.runtime.eval(Script(
         Sequence(
           // Call the service end-point to view an article.
           // (See https://qworum.net/en/specification/v1/#call)
           Call(
             // The owner of this call is the same Qworum object as the owner of the current call.
             // (See https://qworum.net/en/specification/v1/#object)
-            ['@'], 
-            
+            ['@'],
+
             // URL of the end-point to call.
-            '../view-article/', 
+            '../view-article/',
 
             // The data parameters of this call.
             [{
-              name: 'article id', 
+              name: 'article id',
               value: SemanticData({
-                "@context": {"@vocab": "https://schema.org/"},
+                "@context": { "@vocab": "https://schema.org/" },
                 "@type": "Product",
                 "productID": `${i}`
               })
             }]
           ),
-          
+
           // Return to this page.
           Goto('index.html'),
         )
